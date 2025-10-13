@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id Int @default(autoincrement())
+  name String
+  email String
+  password String
+  role UserRole
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+
+model Item {
+  id String   @id @default(cuid())
+  title
+  customID  String?
+  description
+  imageUrl
+  creatorID
+  categoryID
+  customIDTypeID
+  is_public
+}
+
+model Category {
+  id 
+  name String
+}
+
+model Tag {
+  id
+  name
+}
+
+model Comment {
+  id
+  description
+  creatorID
+  itemID
+}
+
+model CustomIdType {
+  id          String        @id @default(cuid())
+  fixedText   String?       @db.Text
+  randomType  RandomType?
+  dateFormat  DateFormat?
+  sequenceName String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("custom_id_types")
+}
+
+enum RandomType {
+  BIT_20      
+  BIT_32      
+  DIGITS_6     
+  DIGITS_9
+  GUID
+}
+
+enum DateFormat {
+  YYYY            // 2023
+  YYYYMMDD        // 20231225
+  YYYYMMDDHHmmss  // 20231225143045
+  YYYY_MM_DD      // 2023-12-25
+  DDMMYYYY        // 25122023
+}
