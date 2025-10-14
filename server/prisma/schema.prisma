@@ -8,13 +8,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Token {
+  id String  @id @default(cuid())
+  refreshToken String 
+}
+
 
 model User {
-  id Int @default(autoincrement())
-  name String
-  email String
-  password String
-  role UserRole
+  id        String   @id @default(cuid())
+  name      String   @unique
+  email     String   @unique
+  password  String
+  isBlocked Boolean  @default(false)
+  role      UserRole
+
+  inventories Inventory[] @relation("UserInventories")
+  items       Item[]
+  likes       Like[]
 }
 
 enum UserRole {
@@ -22,19 +32,19 @@ enum UserRole {
   ADMIN
 }
 
-
 model Inventory {
   id                 String     @id @default(cuid())
-  title              String
-  description        String?
+  title              String     
+  description        String?    @db.Text
   imageUrl           String?
   creatorId          String
   categoryId         String
   customIdTypeId     String
-  is_public          Boolean    @default(false)
-  
+  isPublic           Boolean    @default(false)
+  version            Int        @default(1)
+
   customString1State FieldState @default(NONE)
-  customString1Name  String?
+  customString1Name   String?
   customString1Description String?
   customString2State FieldState @default(NONE)
   customString2Name  String?
@@ -42,7 +52,7 @@ model Inventory {
   customString3State FieldState @default(NONE)
   customString3Name  String?
   customString3Description String?
-  
+
   customText1State   FieldState @default(NONE)
   customText1Name    String?
   customText1Description String?
@@ -52,7 +62,7 @@ model Inventory {
   customText3State   FieldState @default(NONE)
   customText3Name    String?
   customText3Description String?
-  
+
   customInt1State    FieldState @default(NONE)
   customInt1Name     String?
   customInt1Description String?
@@ -62,7 +72,7 @@ model Inventory {
   customInt3State    FieldState @default(NONE)
   customInt3Name     String?
   customInt3Description String?
-  
+
   customLink1State   FieldState @default(NONE)
   customLink1Name    String?
   customLink1Description String?
@@ -72,7 +82,7 @@ model Inventory {
   customLink3State   FieldState @default(NONE)
   customLink3Name    String?
   customLink3Description String?
-  
+
   customBool1State   FieldState @default(NONE)
   customBool1Name    String?
   customBool1Description String?
@@ -82,7 +92,13 @@ model Inventory {
   customBool3State   FieldState @default(NONE)
   customBool3Name    String?
   customBool3Description String?
-  
+
+  tags         Tag[]           @relation("InventoryTags")
+  items        Item[]
+  creator      User             @relation("UserInventories", fields: [creatorId], references: [id], onDelete: Cascade)
+  category     Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  customIdType CustomIdType     @relation(fields: [customIdTypeId], references: [id], onDelete: Cascade)
+
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -98,29 +114,34 @@ model Item {
   inventoryId String
   creatorId   String
   customId    String
-  
+  version     Int      @default(1)
+
   customString1  String?
   customString2  String?
   customString3  String?
-  
+
   customText1    String? @db.Text
   customText2    String? @db.Text
   customText3    String? @db.Text
-  
+
   customInt1     Int?
   customInt2     Int?
   customInt3     Int?
-  
+
   customLink1    String?
   customLink2    String?
   customLink3    String?
-  
+
   customBool1    Boolean?
   customBool2    Boolean?
   customBool3    Boolean?
-  
+
+  @@unique([inventoryId, customId])
+
   likes     Like[]
-  
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  creator   User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -130,42 +151,36 @@ model Like {
   itemId String
   userId String  
 
-  @@unique([itemId, userId], name: "unique_like_per_user")
-  @@map("likes")
+  @@unique([itemId, userId])
   
   item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Category {
   id  String   @id @default(cuid())
-  name String
+  name String  @unique
 
   Inventories Inventory[]
 }
 
 model Tag {
-  id
-  name
-}
-
-model Comment {
-  id
-  description
-  creatorId
-  itemId
-  createdAt
+  id                 String     @id @default(cuid())
+  name               String     @unique
+  
+  inventories        Inventory[] @relation("InventoryTags")
 }
 
 model CustomIdType {
-  id          String        @id @default(cuid())
-  fixedText   String?       @db.Text
-  randomType  RandomType?
-  dateFormat  DateFormat?
+  id           String        @id @default(cuid())
+  fixedText    String?       @db.Text
+  randomType   RandomType?
+  dateFormat   DateFormat?
   sequenceName String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  @@map("custom_id_types")
+  inventories  Inventory[]
 }
 
 enum RandomType {
@@ -177,9 +192,9 @@ enum RandomType {
 }
 
 enum DateFormat {
-  YYYY            // 2023
-  YYYYMMDD        // 20231225
-  YYYYMMDDHHmmss  // 20231225143045
-  YYYY_MM_DD      // 2023-12-25
-  DDMMYYYY        // 25122023
+  YYYY
+  YYYYMMDD
+  YYYYMMDDHHmmss
+  YYYY_MM_DD
+  DDMMYYYY
 }
