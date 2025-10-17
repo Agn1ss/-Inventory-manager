@@ -1,6 +1,10 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./ERD.svg"
 }
 
 datasource db {
@@ -11,6 +15,8 @@ datasource db {
 model Token {
   id String  @id @default(cuid())
   refreshToken String 
+  userId String @unique
+  owner User @relation("UserToken", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 
@@ -18,18 +24,34 @@ model User {
   id        String   @id @default(cuid())
   name      String   @unique
   email     String   @unique
-  password  String
+  password  String?
   isBlocked Boolean  @default(false)
   role      UserRole
 
+  editorsOf   InventoryEditor[]
   inventories Inventory[] @relation("UserInventories")
+  oauthAccounts UserOAuth[] 
   items       Item[]
   likes       Like[]
+
+  Token Token? @relation("UserToken")
 }
 
 enum UserRole {
   USER
   ADMIN
+}
+
+model UserOAuth {
+  id            String   @id @default(cuid())
+  provider      String
+  providerId    String   
+  accessToken   String?  
+  refreshToken  String?  
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
 }
 
 model Inventory {
@@ -44,7 +66,7 @@ model Inventory {
   version            Int        @default(1)
 
   customString1State FieldState @default(NONE)
-  customString1Name   String?
+  customString1Name  String?
   customString1Description String?
   customString2State FieldState @default(NONE)
   customString2Name  String?
@@ -95,18 +117,31 @@ model Inventory {
 
   tags         Tag[]           @relation("InventoryTags")
   items        Item[]
-  creator      User             @relation("UserInventories", fields: [creatorId], references: [id], onDelete: Cascade)
-  category     Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  customIdType CustomIdType     @relation(fields: [customIdTypeId], references: [id], onDelete: Cascade)
+  editors      InventoryEditor[]
+  creator      User            @relation("UserInventories", fields: [creatorId], references: [id], onDelete: Cascade)
+  category     Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  customIdType CustomIdType    @relation(fields: [customIdTypeId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
+
 
 enum FieldState {
   NONE
   NOT_VISIBLE
   VISIBLE
+}
+
+model InventoryEditor {
+  id           String     @id @default(cuid())
+  userId       String
+  inventoryId  String
+
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventory    Inventory   @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, inventoryId])
 }
 
 model Item {
@@ -144,6 +179,7 @@ model Item {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
 }
 
 model Like {
