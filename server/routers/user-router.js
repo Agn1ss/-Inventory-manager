@@ -1,15 +1,31 @@
-import { Router } from 'express';
-import userController from '../controllers/user-controller.js';
+import { Router } from "express";
+import { body } from "express-validator"; 
+import userController from "../controllers/user-controller.js";
 
-const router = Router();
+const userRouter = Router();
 
-router.post('/registration', userController.registration);
-router.post('/login', userController.login);
-router.post('/logout', userController.logout);
-router.get('/refresh', userController.refresh);
-router.get('/users', userController.getUsers);
-router.delete('/users/:id', userController.delete);
-router.patch('/users/:id/block', userController.block);
-router.patch('/users/:id/unlock', userController.unlock);
+userRouter.post(
+  "/registration",
+  [
+    body("email").isEmail().withMessage("inc. email"),
+    body("password")
+      .isString()
+      .withMessage("inc. pass")
+      .isLength({ min: 4 })
+      .withMessage("inc. pass")
+      .matches(/^\S+$/)
+      .withMessage("inc. pass"),
+    body("name").isString().notEmpty().withMessage("inc. name"),
+  ],
+  userController.registration
+);
+userRouter.post("/login", userController.login);
+userRouter.post("/logout", userController.logout);
+userRouter.get("/refresh", userController.refresh);
+userRouter.get("/users", userController.getUsers);
+userRouter.delete("/users/:id", userController.delete);
+userRouter.patch("/users/:id/block", userController.block);
+userRouter.patch("/users/:id/unlock", userController.unlock);
+// userRouter.get('/inventories', userController.getUserInventories);
 
-export default router;
+export default userRouter;

@@ -46,8 +46,6 @@ model UserOAuth {
   id            String   @id @default(cuid())
   provider      String
   providerId    String   
-  accessToken   String?  
-  refreshToken  String?  
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -68,52 +66,77 @@ model Inventory {
   customString1State FieldState @default(NONE)
   customString1Name  String?
   customString1Description String?
+  customString1Order Int?      
+
   customString2State FieldState @default(NONE)
   customString2Name  String?
   customString2Description String?
+  customString2Order Int?      
+
   customString3State FieldState @default(NONE)
   customString3Name  String?
   customString3Description String?
+  customString3Order Int?      
 
   customText1State   FieldState @default(NONE)
   customText1Name    String?
   customText1Description String?
+  customText1Order   Int?      
+
   customText2State   FieldState @default(NONE)
   customText2Name    String?
   customText2Description String?
+  customText2Order   Int?      
+
   customText3State   FieldState @default(NONE)
   customText3Name    String?
   customText3Description String?
+  customText3Order   Int?      
 
   customInt1State    FieldState @default(NONE)
   customInt1Name     String?
   customInt1Description String?
+  customInt1Order    Int?      
+
   customInt2State    FieldState @default(NONE)
   customInt2Name     String?
   customInt2Description String?
+  customInt2Order    Int?      
+
   customInt3State    FieldState @default(NONE)
   customInt3Name     String?
   customInt3Description String?
+  customInt3Order    Int?      
 
   customLink1State   FieldState @default(NONE)
   customLink1Name    String?
   customLink1Description String?
+  customLink1Order   Int?      
+
   customLink2State   FieldState @default(NONE)
   customLink2Name    String?
   customLink2Description String?
+  customLink2Order   Int?      
+
   customLink3State   FieldState @default(NONE)
   customLink3Name    String?
   customLink3Description String?
+  customLink3Order   Int?      
 
   customBool1State   FieldState @default(NONE)
   customBool1Name    String?
   customBool1Description String?
+  customBool1Order   Int?      
+
   customBool2State   FieldState @default(NONE)
   customBool2Name    String?
   customBool2Description String?
+  customBool2Order   Int?      
+
   customBool3State   FieldState @default(NONE)
   customBool3Name    String?
   customBool3Description String?
+  customBool3Order   Int?      
 
   tags         Tag[]           @relation("InventoryTags")
   items        Item[]
@@ -148,7 +171,7 @@ model Item {
   id          String   @id @default(cuid())
   inventoryId String
   creatorId   String
-  customId    String
+  customId    String?
   version     Int      @default(1)
 
   customString1  String?
@@ -210,9 +233,11 @@ model Tag {
 model CustomIdType {
   id           String        @id @default(cuid())
   fixedText    String?       @db.Text
+  isTypeNotEmpty Boolean @default(false)
   randomType   RandomType?
   dateFormat   DateFormat?
-  sequenceName String?
+  sequenceName Boolean @default(false)
+  sequenceCounter Int @default(1)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 

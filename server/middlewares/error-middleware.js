@@ -1,4 +1,4 @@
-import ApiError from '../exceptions/api-error.js';
+import ApiError from "../exceptions/api-error.js";
 
 export default function errorMiddleware(err, req, res, next) {
   console.log(err);
@@ -7,5 +7,5 @@ export default function errorMiddleware(err, req, res, next) {
     return res.status(err.status).json({ message: err.message, errors: err.errors });
   }
 
-  return res.status(500).json({ message: 'Unidentified error' });
+  return res.status(500).json({ message: "Unidentified error" });
 }
