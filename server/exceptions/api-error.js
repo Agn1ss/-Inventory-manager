@@ -23,6 +23,10 @@ class ApiError extends Error {
   static UnprocessableEntity(message, errors = []) {
     return new ApiError(422, message, errors);
   }
+
+  static NotFound(message = "Resource not found") {
+    return new ApiError(404, message);
+  }
 }
 
 export default ApiError;

@@ -28,13 +28,15 @@ model User {
   isBlocked Boolean  @default(false)
   role      UserRole
 
-  editorsOf   InventoryEditor[]
-  inventories Inventory[] @relation("UserInventories")
   oauthAccounts UserOAuth[] 
-  items       Item[]
-  likes       Like[]
+  inventories   Inventory[] @relation("UserInventories")
+  items         Item[]
+  comments      Comment[]
+  likes         Like[]
+  editorsOf     InventoryEditor[]
 
   Token Token? @relation("UserToken")
+
 }
 
 enum UserRole {
@@ -139,6 +141,7 @@ model Inventory {
   customBool3Order   Int?      
 
   tags         Tag[]           @relation("InventoryTags")
+  comments     Comment[]
   items        Item[]
   editors      InventoryEditor[]
   creator      User            @relation("UserInventories", fields: [creatorId], references: [id], onDelete: Cascade)
@@ -147,6 +150,7 @@ model Inventory {
 
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+
 }
 
 
@@ -230,14 +234,26 @@ model Tag {
   inventories        Inventory[] @relation("InventoryTags")
 }
 
+model Comment {
+  id          String    @id @default(cuid())
+  text        String    @db.Text
+  inventoryId String
+  creatorId   String
+  createdAt    DateTime      @default(now())
+
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  
+  creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
 model CustomIdType {
   id           String        @id @default(cuid())
   fixedText    String?       @db.Text
   isTypeNotEmpty Boolean @default(false)
   randomType   RandomType?
   dateFormat   DateFormat?
-  sequenceName Boolean @default(false)
-  sequenceCounter Int @default(1)
+  sequenceName Boolean       @default(false)
+  sequenceCounter Int        @default(1)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 

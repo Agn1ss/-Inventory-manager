@@ -1,7 +1,6 @@
 import ApiError from "../exceptions/api-error.js";
-import tokenService from "../service/token-service.js";
-import prisma from "../prismaClient.js";
-
+import prisma from "../prisma/prisma-client.js";
+import tokenService from "../services/token-service.js";
 export default async function authMiddleware(req, res, next) {
   try {
     const authorizationHeader = req.headers.authorization;

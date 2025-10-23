@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { body } from "express-validator"; 
+import { body } from "express-validator";
 import userController from "../controllers/user-controller.js";
+import authMiddleware from "../middlewares/auth-middleware.js";
 
 const userRouter = Router();
 
@@ -23,9 +24,10 @@ userRouter.post("/login", userController.login);
 userRouter.post("/logout", userController.logout);
 userRouter.get("/refresh", userController.refresh);
 userRouter.get("/users", userController.getUsers);
-userRouter.delete("/users/:id", userController.delete);
+userRouter.delete("/users/:id/delete", userController.delete);
 userRouter.patch("/users/:id/block", userController.block);
 userRouter.patch("/users/:id/unlock", userController.unlock);
-// userRouter.get('/inventories', userController.getUserInventories);
+userRouter.get("/inventories", authMiddleware, userController.getUserInventories);
+userRouter.get("inventories/editable", authMiddleware, userController.getUserEditableInventories);
 
 export default userRouter;

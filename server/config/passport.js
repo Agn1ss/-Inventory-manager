@@ -19,7 +19,7 @@ passport.use(
         const providerId = profile.id;
         const email = profile.emails?.[0]?.value;
         let name = email.split("@")[0];
-
+        
         const existingUser = await prisma.user.findUnique({ where: { name } });
         if(existingUser) {
           const randomIndex = Math.random().toString(36).substring(2, 5);

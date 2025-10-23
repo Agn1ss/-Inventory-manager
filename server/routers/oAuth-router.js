@@ -1,5 +1,5 @@
 import express from "express";
-import passport from "../config/pasport.js";
+import passport from "../config/passport.js";
 import userController from "../controllers/user-controller.js";
 
 const oAuthRouter = express.Router();

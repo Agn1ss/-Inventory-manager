@@ -87,16 +87,18 @@ class UserService {
     return { ...tokens, user: userDto };
   }
 
-  async getUsers({ search = "", skip = 0, take = 20 } = {}) {
+  async getUsers(search = "", skip = 0, take = 20) {
+    const searchFilter = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
     const users = await prisma.user.findMany({
-      where: search
-        ? {
-            name: {
-              contains: search,
-              mode: "insensitive",
-            },
-          }
-        : {},
+      where: searchFilter,
       skip: Number(skip),
       take: Number(take),
       select: { id: true, name: true, email: true, isBlocked: true, role: true },
@@ -135,6 +137,69 @@ class UserService {
     } catch (e) {
       throw ApiError.BadRequest("User not found");
     }
+  }
+
+  async getUserInventories(userId, search = "", skip = 0, take = 20) {
+    const searchFilter = search
+      ? {
+          OR: [
+            { title: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
+    const inventories = await prisma.inventory.findMany({
+      where: {
+        creatorId: userId,
+        ...searchFilter,
+      },
+      skip: Number(skip),
+      take: Number(take),
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        creatorId: true,
+        categoryId: true,
+      },
+    });
+
+    return inventories;
+  }
+
+  async getUserEditableInventories(userId, search = "", skip = 0, take = 20) {
+    const searchFilter = search
+      ? {
+          OR: [
+            { title: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
+    const inventories = await prisma.inventory.findMany({
+      where: {
+        editors: {
+          some: {
+            userId: userId,
+          },
+        },
+        ...searchFilter,
+      },
+      skip: Number(skip),
+      take: Number(take),
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        creatorId: true,
+        categoryId: true,
+      },
+    });
+
+    return inventories;
   }
 }
 

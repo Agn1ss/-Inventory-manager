@@ -1,52 +1,218 @@
 import prisma from "../prisma/prisma-client.js";
-import customIdTypeController from "./customIdType-service.js";
+import customIdTypeController from "./custom-id-type-service.js";
 import filterKeysByCondition from "../utils/filterKeysByCondition.js";
 import InventoryDto from "../dtos/inventory-dto.js";
 import tagService from "./tag-service.js";
+import ApiError from "../exceptions/api-error.js";
 
 class InventoryService {
-  async create(inventoryData) {
-    const CustomIdType = await customIdTypeController.createType(inventoryData.customIdType);
-
+  async create(creatorId) {
     let category = await prisma.category.findUnique({
-      where: { name: inventoryData.categoryName },
+      where: { name: "various" },
     });
     if (!category) {
-      category = await prisma.category.create({ data: { name: inventoryData.categoryName } });
-    }
-
-    let fields = [
-      ["title", inventoryData.title, () => true],
-      ["description", inventoryData.description, v => v && v.trim() !== ""],
-      ["imageUrl", inventoryData.imageUrl, v => v && v.trim() !== ""],
-      ["categoryId", category.id, () => true],
-      ["creatorId", inventoryData.creatorId, () => true],
-      ["customIdTypeId", CustomIdType.id, () => true],
-      ["isPublic", inventoryData.isPublic, v => v],
-    ];
-
-    if (inventoryData.customFields) {
-      const types = ["string", "text", "int", "link", "bool"];
-      types.forEach(type => {
-        inventoryData.customFields[type]?.forEach((field, index) => {
-          const prefix = `custom${type.charAt(0).toUpperCase() + type.slice(1)}${index + 1}`;
-          fields.push([`${prefix}State`, field.state, () => true]);
-          if (field.name !== "NONE") {
-            fields.push([`${prefix}Name`, field.name, () => true]);
-            fields.push([`${prefix}Description`, field.description, v => v && v.trim() !== ""]);
-            fields.push([`${prefix}Order`, field.order, () => true]);
-          }
-        });
+      category = await prisma.category.create({
+        data: { name: "various" },
       });
     }
+    const customIdType = await customIdTypeController.create();
+    const inventory = await prisma.inventory.create({
+      data: {
+        title: "New Inventory",
+        description: "",
+        creator: {
+          connect: { id: creatorId },
+        },
+        customIdType: {
+          connect: { id: customIdType.id },
+        },
+        category: {
+          connect: {id: category.id}
+        }
+      },
+    });
 
-    const data = filterKeysByCondition(fields);
-    const inventory = await prisma.inventory.create({ data });
     const inventoryDto = new InventoryDto(inventory);
 
-    await tagService.addMany(inventoryData.tags, inventoryDto.id);
+    return {
+      inventory: inventoryDto,
+      tags: [],
+      category: "various",
+      customIdType: customIdType,
+    };
+  }
 
-    return { tags: inventoryData.tags, inventory: inventoryDto };
+  async update(inventoryId, inventoryData) {
+    return await prisma.$transaction(async tx => {
+      const existingInventory = await tx.inventory.findUnique({
+        where: { id: inventoryId },
+        select: { id: true, version: true, customIdTypeId: true },
+      });
+
+      if (!existingInventory) {
+        throw ApiError.BadRequest(`Inventory with id "${inventoryId}" not found`);
+      }
+
+      if (existingInventory.version !== inventoryData.version) {
+        throw ApiError.BadRequest(
+          `Inventory was updated by someone else. Expected version ${inventoryData.version}, but found ${existingInventory.version}`
+        );
+      }
+
+      const customIdType = await customIdTypeController.update(
+        existingInventory.customIdTypeId,
+        inventoryData.customIdType
+      );
+
+      let categoryName = inventoryData.categoryName ?? "various";
+
+      let category = await tx.category.findUnique({
+        where: { name: categoryName },
+      });
+      if (!category) {
+        category = await tx.category.create({ data: { name: categoryName } });
+      }
+
+      const fields = [
+        ["title", inventoryData.title, () => true],
+        ["description", inventoryData.description, v => v && v.trim() !== ""],
+        ["imageUrl", inventoryData.imageUrl, v => v && v.trim() !== ""],
+        ["categoryId", category?.id, () => !!category],
+        ["creatorId", inventoryData.creatorId, () => true],
+        ["customIdTypeId", customIdType.id, () => true],
+        ["isPublic", inventoryData.isPublic, () => true],
+      ];
+
+      if (inventoryData.customFields) {
+        const types = ["string", "text", "int", "link", "bool"];
+        types.forEach(type => {
+          inventoryData.customFields[type]?.forEach((field, index) => {
+            const prefix = `custom${type.charAt(0).toUpperCase() + type.slice(1)}${index + 1}`;
+            fields.push([`${prefix}State`, field.state, () => true]);
+            if (field.name !== "NONE") {
+              fields.push([`${prefix}Name`, field.name, () => true]);
+              fields.push([`${prefix}Description`, field.description, v => v && v.trim() !== ""]);
+              fields.push([`${prefix}Order`, field.order, () => true]);
+            }
+          });
+        });
+      }
+
+      const data = filterKeysByCondition(fields);
+
+      const inventory = await tx.inventory.update({
+        where: {
+          id: inventoryId,
+        },
+        data: {
+          ...data,
+          version: { increment: 1 },
+        },
+      });
+
+      let tags = [];
+      const tagResult = await tagService.setInventoryTags(inventoryData.tags, inventory.id, tx);
+      if (tagResult.success) {
+        tags = inventoryData.tags;
+      }
+    
+      if (inventoryData.editorsIds) {
+        await inventoryService.setInventoryEditors(inventory.id, inventoryData.editorsIds, tx);
+      }
+
+      const inventoryDto = new InventoryDto(inventory);
+
+      return {
+        inventory: inventoryDto,
+        tags: tags,
+        category: categoryName,
+        customIdType: customIdType,
+      };
+    });
+  }
+
+  async getInventory(id) {
+    const inventory = await prisma.inventory.findUnique({
+      where: { id },
+      include: {
+        tags: { select: { name: true } },
+        category: { select: { name: true } },
+        customIdType: {
+          select: {
+            id: true,
+            fixedText: true,
+            isTypeNotEmpty: true,
+            randomType: true,
+            dateFormat: true,
+            sequenceName: true,
+            sequenceCounter: true,
+          },
+        },
+      },
+    });
+
+    if (!inventory) return null;
+
+    const inventoryDto = new InventoryDto(inventory);
+
+    return {
+      inventory: inventoryDto,
+      tags: inventory.tags.map(t => t.name),
+      category: inventory.category?.name || null,
+      customIdType: inventory.customIdType,
+    };
+  }
+
+  async setInventoryEditors(inventoryId, newEditorIds, tx) {
+    if (!tx) {
+      throw ApiError.BadRequest(`Update inventory editors error. Inventory was updated by someone else.`);
+    }
+
+    await tx.inventoryEditor.deleteMany({
+      where: {
+        inventoryId,
+        userId: { notIn: newEditorIds },
+      },
+    });
+
+    if (newEditorIds.length > 0) {
+      await tx.inventoryEditor.createMany({
+        data: newEditorIds.map(userId => ({ inventoryId, userId })),
+        skipDuplicates: true,
+      });
+    }
+  }
+
+  async getInventoryEditors(inventoryId, search = "", skip = 0, take = 20) {
+    const searchFilter = search
+      ? {
+          user: {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+            ],
+          },
+        }
+      : {};
+    const editors = await prisma.inventoryEditor.findMany({
+      where: {
+        inventoryId,
+        ...searchFilter,
+      },
+      skip: Number(skip),
+      take: Number(take),
+      select: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return editors.map(e => e.user);
   }
 }
 
