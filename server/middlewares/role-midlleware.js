@@ -1,6 +1,4 @@
 import ApiError from "../exceptions/api-error.js";
-import tokenService from "../service/token-service.js";
-import prisma from "../prismaClient.js";
 
 export default function roleMiddleware(roles = []) {
   return (req, res, next) => {

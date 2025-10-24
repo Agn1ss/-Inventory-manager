@@ -15,9 +15,9 @@ class CustomIdTypeService {
   async update(id, updateData) {
     const fields = [
       ["fixedText", updateData.fixedText, v => v && v.trim() !== ""],
-      ["randomType", updateData.randomType, v => v],
-      ["dateFormat", updateData.dateFormat, v => v],
-      ["sequenceName", updateData.sequenceName, v => v],
+      ["randomType", updateData.randomType, () => true],
+      ["dateFormat", updateData.dateFormat, () => true],
+      ["sequenceName", updateData.sequenceName, () => true],
     ];
 
     const data = filterKeysByCondition(fields);
@@ -46,37 +46,27 @@ class CustomIdTypeService {
     return customIdType;
   }
 
-  async generateId(typeId,date = dayjs()) {
+  async generateId(typeId, date = new Date()) {
     const type = await prisma.customIdType.findUnique({ where: { id: typeId } });
     if (!type) throw new Error(`CustomIdType with id "${typeId}" not found`);
-
+  
+    const dayjsDate = dayjs(date);
     const parts = [];
-
-    if (type.fixedText) {
-      parts.push(type.fixedText);
-    }
-
-    if (type.randomType) {
-      parts.push(RANDOM_TYPES[type.randomType]());
-    }
-
-    if (type.dateFormat) {
-      parts.push(DATE_FORMAT_TYPES[type.dateFormat](date));
-    }
-
+  
+    if (type.fixedText) parts.push(type.fixedText);
+    if (type.randomType) parts.push(RANDOM_TYPES[type.randomType]());
+    if (type.dateFormat) parts.push(DATE_FORMAT_TYPES[type.dateFormat](dayjsDate));
     if (type.sequenceName) {
       const seq = String(type.sequenceCounter).padStart(4, "0");
       parts.push(seq);
-
+  
       await prisma.customIdType.update({
         where: { id: typeId },
         data: { sequenceCounter: { increment: 1 } },
       });
     }
-
-    const customId = parts.filter(Boolean).join("-");
-
-    return customId;
+  
+    return parts.filter(Boolean).join("-");
   }
 }
 

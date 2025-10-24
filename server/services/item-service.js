@@ -3,15 +3,6 @@ import ApiError from "../exceptions/api-error.js";
 import prisma from "../prisma/prisma-client.js";
 import customIdTypeService from "./custom-id-type-service.js";
 
-function filterKeysByCondition(fieldArray) {
-  return fieldArray.reduce((acc, [key, value, condition]) => {
-    if (typeof condition === "function" ? condition(value) : condition) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {});
-}
-
 class ItemService {
   async create(inventoryId, creatorId) {
     const inventory = await prisma.inventory.findUnique({
@@ -69,20 +60,70 @@ class ItemService {
     return itemDto;
   }
 
-  // async update(id) {
-  //   const item = await prisma.item.findUnique({ where: { id } });
-  //   if (!item) {
-  //     throw new ApiError.NotFound(`item ${id} not founded`);
-  //   }
-  //   // проверять updatedAt у CustomIdType и только тогда вызывать generateId 
-  //   // оптимистическая блокировка 
-  //   // передавать время создания item в generateId
+  async update(inventoryId, itemId, itemData) {
+    return await prisma.$transaction(async tx => {
+      const existingItem = await tx.item.findUnique({
+        where: { id: itemId },
+        select: { id: true, version: true, createdAt: true, updatedAt: true },
+      });
 
-  //   const itemDto = new ItemDto(item);
+      if (!existingItem) {
+        throw ApiError.BadRequest(`Item with id "${itemId}" not found`);
+      }
 
-  //   return itemDto;
-  // }
+      if (existingItem.version !== itemData.version) {
+        throw ApiError.BadRequest(
+          `Item was updated by someone else. Expected version ${itemData.version}, but found ${existingItem.version}`
+        );
+      }
 
+      const inventory = await tx.inventory.findUnique({
+        where: { id: inventoryId },
+        include: { customIdType: true },
+      });
+
+      if (!inventory) {
+        throw ApiError.BadRequest(`Inventory with id "${inventoryId}" not found`);
+      }
+
+      const data = {};
+
+      const fieldGroups = ["string", "text", "int", "link", "bool"];
+      for (const type of fieldGroups) {
+        const fields = itemData.customFields?.[type] || [];
+        for (let i = 0; i < fields.length; i++) {
+          const { key, value } = fields[i];
+          const stateKey = `custom${type.charAt(0).toUpperCase() + type.slice(1)}${i + 1}State`;
+
+          if (inventory[stateKey] && inventory[stateKey] !== "NONE") {
+            data[key] = value;
+          }
+        }
+      }
+
+      const customIdUpdatedAt = new Date(inventory.customIdType.updatedAt);
+      const itemUpdatedAt = new Date(existingItem.updatedAt || existingItem.createdAt);
+
+      if (customIdUpdatedAt > itemUpdatedAt) {
+        data.customId = await customIdTypeService.generateId(
+          inventory.customIdType.id,
+          existingItem.createdAt
+        );
+      }
+
+      const updatedItem = await tx.item.update({
+        where: { id: itemId },
+        data: {
+          ...data,
+          version: { increment: 1 },
+        },
+      });
+
+      const itemDto = new ItemDto(updatedItem);
+
+      return itemDto;
+    });
+  }
 
   async getOne(id) {
     const item = await prisma.item.findUnique({ where: { id } });
@@ -93,6 +134,16 @@ class ItemService {
     const itemDto = new ItemDto(item);
 
     return itemDto;
+  }
+
+  async delete(id) {
+    try {
+      await prisma.item.delete({
+        where: { id },
+      });
+    } catch (e) {
+      throw ApiError.BadRequest("Item not found");
+    }
   }
 }
 

@@ -75,9 +75,9 @@ class InventoryService {
 
       const fields = [
         ["title", inventoryData.title, () => true],
-        ["description", inventoryData.description, v => v && v.trim() !== ""],
-        ["imageUrl", inventoryData.imageUrl, v => v && v.trim() !== ""],
-        ["categoryId", category?.id, () => !!category],
+        ["description", inventoryData.description, () => true],
+        ["imageUrl", inventoryData.imageUrl, () => true],
+        ["categoryId", category.id, () => true],
         ["creatorId", inventoryData.creatorId, () => true],
         ["customIdTypeId", customIdType.id, () => true],
         ["isPublic", inventoryData.isPublic, () => true],
@@ -91,7 +91,7 @@ class InventoryService {
             fields.push([`${prefix}State`, field.state, () => true]);
             if (field.name !== "NONE") {
               fields.push([`${prefix}Name`, field.name, () => true]);
-              fields.push([`${prefix}Description`, field.description, v => v && v.trim() !== ""]);
+              fields.push([`${prefix}Description`, field.description, () => true]);
               fields.push([`${prefix}Order`, field.order, () => true]);
             }
           });
@@ -194,13 +194,13 @@ class InventoryService {
           },
         }
       : {};
-    const editors = await prisma.inventoryEditor.findMany({
+  
+    const queryOptions = {
       where: {
         inventoryId,
         ...searchFilter,
       },
       skip: Number(skip),
-      take: Number(take),
       select: {
         user: {
           select: {
@@ -210,8 +210,14 @@ class InventoryService {
           },
         },
       },
-    });
-
+    };
+  
+    if (Number(take) > 0) {
+      queryOptions.take = Number(take);
+    }
+  
+    const editors = await prisma.inventoryEditor.findMany(queryOptions);
+  
     return editors.map(e => e.user);
   }
 }

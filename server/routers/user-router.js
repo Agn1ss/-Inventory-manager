@@ -2,6 +2,8 @@ import { Router } from "express";
 import { body } from "express-validator";
 import userController from "../controllers/user-controller.js";
 import authMiddleware from "../middlewares/auth-middleware.js";
+import inventoryAccessMiddleware from "../middlewares/inventory-access-middleware.js";
+import roleMiddleware from "../middlewares/role-midlleware.js";
 
 const userRouter = Router();
 
@@ -22,11 +24,11 @@ userRouter.post(
 );
 userRouter.post("/login", userController.login);
 userRouter.post("/logout", userController.logout);
-userRouter.get("/refresh", userController.refresh);
+userRouter.get("/refresh", userController.refresh);//authMiddleware
 userRouter.get("/users", userController.getUsers);
-userRouter.delete("/users/:id/delete", userController.delete);
-userRouter.patch("/users/:id/block", userController.block);
-userRouter.patch("/users/:id/unlock", userController.unlock);
+userRouter.delete("/users/:id/delete", userController.delete); //authMiddleware, roleMiddleware(["ADMIN"])
+userRouter.patch("/users/:id/block", userController.block); //authMiddleware, roleMiddleware(["ADMIN"])
+userRouter.patch("/users/:id/unlock", userController.unlock); //authMiddleware, roleMiddleware(["ADMIN"])
 userRouter.get("/inventories", authMiddleware, userController.getUserInventories);
 userRouter.get("inventories/editable", authMiddleware, userController.getUserEditableInventories);
 
