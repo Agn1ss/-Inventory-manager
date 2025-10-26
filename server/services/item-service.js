@@ -57,7 +57,7 @@ class ItemService {
 
     const itemDto = new ItemDto(item);
 
-    return itemDto;
+    return { item: itemDto, likesCount: 0};
   }
 
   async update(inventoryId, itemId, itemData) {
@@ -120,8 +120,10 @@ class ItemService {
       });
 
       const itemDto = new ItemDto(updatedItem);
+      const likes = await this.getLikes(existingItem.id) || 0;
 
-      return itemDto;
+
+      return {item: itemDto, likesCount: likes};
     });
   }
 
@@ -132,8 +134,9 @@ class ItemService {
     }
 
     const itemDto = new ItemDto(item);
+    const likes = await this.getLikes(item.id) || 0;
 
-    return itemDto;
+    return {item: itemDto, likesCount: likes};
   }
 
   async delete(id) {
@@ -142,8 +145,45 @@ class ItemService {
         where: { id },
       });
     } catch (e) {
-      throw ApiError.BadRequest("Item not found");
+      throw ApiError.BadRequest(`item ${id} not founded`);
     }
+  }
+
+  async like(userId, itemId) {
+    const item = await prisma.item.findUnique({where: {id: itemId}})
+    if(!item) {
+      throw ApiError.BadRequest(`item ${id} not founded`);
+    }
+    const existingLike = await prisma.like.findUnique({
+      where: {
+        itemId_userId: { itemId, userId },
+      },
+    });
+
+    if (existingLike) {
+      await prisma.like.delete({
+        where: {
+          itemId_userId: { itemId, userId },
+        },
+      });
+      return `like on item ${itemId} remuved`;
+    } else {
+      await prisma.like.create({
+        data: {
+          userId,
+          itemId,
+        },
+      });
+      return`Item ${itemId} liked`;
+    }
+  }
+
+  async getLikes(itemId) {
+    const count = await prisma.like.count({
+      where: { itemId },
+    });
+
+    return count;
   }
 }
 

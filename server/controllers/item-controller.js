@@ -45,12 +45,22 @@ class ItemController {
     try {
       const id = req.params.itemId;
       await itemService.delete(id);
-      return res.json({ message: `User ${id} deleted successfully` });
+      return res.json({ message: `Item ${id} deleted successfully` });
     } catch (e) {
       next(e);
     }
   }
 
+  async like(req, res, next) {
+    try {
+      const itemId = req.params.itemId;
+      const userId = req.user.id;
+      const massage = await itemService.like(userId, itemId);
+      return res.json({ message: massage });
+    } catch (e) {
+      next(e);
+    }
+  }
 
 }
 

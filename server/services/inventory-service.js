@@ -116,8 +116,8 @@ class InventoryService {
         tags = inventoryData.tags;
       }
     
-      if (inventoryData.editorsIds) {
-        await inventoryService.setInventoryEditors(inventory.id, inventoryData.editorsIds, tx);
+      if (inventoryData.editorsId) {
+        await inventoryService.setInventoryEditors(inventory.id, inventoryData.editorsId, tx);
       }
 
       const inventoryDto = new InventoryDto(inventory);

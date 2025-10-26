@@ -23,12 +23,12 @@ userRouter.post(
   userController.registration
 );
 userRouter.post("/login", userController.login);
-userRouter.post("/logout", userController.logout);
-userRouter.get("/refresh", userController.refresh);//authMiddleware
+userRouter.post("/logout",authMiddleware, userController.logout);
+userRouter.get("/refresh", userController.refresh);
 userRouter.get("/users", userController.getUsers);
-userRouter.delete("/users/:id/delete", userController.delete); //authMiddleware, roleMiddleware(["ADMIN"])
-userRouter.patch("/users/:id/block", userController.block); //authMiddleware, roleMiddleware(["ADMIN"])
-userRouter.patch("/users/:id/unlock", userController.unlock); //authMiddleware, roleMiddleware(["ADMIN"])
+userRouter.delete("/users/:id/delete",authMiddleware, roleMiddleware(["ADMIN"]), userController.delete);
+userRouter.patch("/users/:id/block",authMiddleware, roleMiddleware(["ADMIN"]), userController.block);
+userRouter.patch("/users/:id/unlock",authMiddleware, roleMiddleware(["ADMIN"]), userController.unlock);
 userRouter.get("/inventories", authMiddleware, userController.getUserInventories);
 userRouter.get("inventories/editable", authMiddleware, userController.getUserEditableInventories);
 

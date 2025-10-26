@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as FacebookStrategy } from "passport-facebook";
 import prisma from "../prisma/prisma-client.js";
 import dotenv from "dotenv";
 import ApiError from "../exceptions/api-error.js";
@@ -19,9 +20,9 @@ passport.use(
         const providerId = profile.id;
         const email = profile.emails?.[0]?.value;
         let name = email.split("@")[0];
-        
+
         const existingUser = await prisma.user.findUnique({ where: { name } });
-        if(existingUser) {
+        if (existingUser) {
           const randomIndex = Math.random().toString(36).substring(2, 5);
           name += `_${randomIndex}`;
         }
@@ -58,7 +59,65 @@ passport.use(
     }
   )
 );
+passport.use(
+  new FacebookStrategy(
+    {
+      clientID: process.env.FACEBOOK_CLIENT_ID,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+      profileFields: ["id", "emails", "displayName"],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const provider = "facebook";
+        const providerId = profile.id;
+        const email = profile.emails?.[0]?.value;
 
+        if(!email) {
+          throw ApiError.NotFound("Email not found.")
+        }
 
+        let name = email
+          ? email.split("@")[0]
+          : profile.displayName.replace(/\s+/g, "_").toLowerCase();
+
+        const existingUser = await prisma.user.findUnique({ where: { name } });
+        if (existingUser) {
+          const randomSuffix = Math.random().toString(36).substring(2, 5);
+          name += `_${randomSuffix}`;
+        }
+
+        let userOAuth = await prisma.userOAuth.findUnique({
+          where: { provider_providerId: { provider, providerId } },
+          include: { user: true },
+        });
+
+        let user;
+
+        if (!userOAuth) {
+          user = email ? await prisma.user.findUnique({ where: { email } }) : null;
+
+          if (!user) {
+            user = await prisma.user.create({
+              data: { name, email, role: "USER" },
+            });
+          }
+
+          userOAuth = await prisma.userOAuth.create({
+            data: { provider, providerId, userId: user.id },
+            include: { user: true },
+          });
+        } else {
+          user = userOAuth.user;
+        }
+
+        return done(null, user);
+      } catch (error) {
+        console.error("Facebook OAuth error:", error);
+        done(error, null);
+      }
+    }
+  )
+);
 
 export default passport;

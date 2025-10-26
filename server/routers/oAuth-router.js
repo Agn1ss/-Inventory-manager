@@ -12,12 +12,19 @@ oAuthRouter.get(
   userController.login
 );
 
-// oAuthRouter.get("/github", passport.authenticate("github", { scope: ["email"] }));
-// oAuthRouter.get(
-//   "/github/callback",
-//   passport.authenticate("github", { session: false, failureRedirect: "/api/oauth/failed" }),
-//   userController.login
-// );
+oAuthRouter.get(
+  "/facebook",
+  passport.authenticate("facebook", { scope: ["email"] })
+);
+
+oAuthRouter.get(
+  "/facebook/callback",
+  passport.authenticate("facebook", {
+    session: false,
+    failureRedirect: "/api/oauth/failed",
+  }),
+  userController.login
+);
 
 oAuthRouter.get("/failed", (req, res) => {
   res.status(401).json({ message: "OAuth authentication failed" });
