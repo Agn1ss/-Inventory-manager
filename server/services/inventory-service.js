@@ -27,8 +27,8 @@ class InventoryService {
           connect: { id: customIdType.id },
         },
         category: {
-          connect: {id: category.id}
-        }
+          connect: { id: category.id },
+        },
       },
     });
 
@@ -115,7 +115,7 @@ class InventoryService {
       if (tagResult.success) {
         tags = inventoryData.tags;
       }
-    
+
       if (inventoryData.editorsId) {
         await inventoryService.setInventoryEditors(inventory.id, inventoryData.editorsId, tx);
       }
@@ -165,7 +165,9 @@ class InventoryService {
 
   async setInventoryEditors(inventoryId, newEditorIds, tx) {
     if (!tx) {
-      throw ApiError.BadRequest(`Update inventory editors error. Inventory was updated by someone else.`);
+      throw ApiError.BadRequest(
+        `Update inventory editors error. Inventory was updated by someone else.`
+      );
     }
 
     await tx.inventoryEditor.deleteMany({
@@ -183,7 +185,7 @@ class InventoryService {
     }
   }
 
-  async getInventoryEditors(inventoryId, search = "", skip = 0, take = 20) {
+  async getInventoryEditors({ inventoryId, search = "", skip = 0, take = 20 }) {
     const searchFilter = search
       ? {
           user: {
@@ -194,7 +196,7 @@ class InventoryService {
           },
         }
       : {};
-  
+
     const queryOptions = {
       where: {
         inventoryId,
@@ -211,15 +213,89 @@ class InventoryService {
         },
       },
     };
-  
+
     if (Number(take) > 0) {
       queryOptions.take = Number(take);
     }
-  
+
     const editors = await prisma.inventoryEditor.findMany(queryOptions);
-  
+
     return editors.map(e => e.user);
   }
+
+  async searchInventories({ search = "", skip = 0, take = 5, newest = false }) {
+    const queryOptions = {
+      ...(search
+        ? {
+            where: {
+              OR: [
+                { title: { contains: search, mode: "insensitive" } },
+                { description: { contains: search, mode: "insensitive" } },
+              ],
+            },
+          }
+        : {}),
+      ...(newest ? { orderBy: { createdAt: "desc" } } : {}),
+    };
+
+    const inventories = await prisma.inventory.findMany({
+      ...queryOptions,
+      skip: Number(skip),
+      take: Number(take),
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        creator: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    return inventories.map(inv => ({
+      id: inv.id,
+      title: inv.title,
+      description: inv.description,
+      imageUrl: inv.imageUrl,
+      creatorName: inv.creator.name,
+    }));
+  }
+
+  async getMostPopularInventories(limit = 5) {
+    const inventories = await prisma.inventory.findMany({
+      take: limit,
+      orderBy: {
+        items: { _count: "desc" },
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        creator: {
+          select: { name: true },
+        },
+        _count: {
+          select: { items: true },
+        },
+      },
+    });
+
+    const inventoriesData = inventories.map(inv => ({
+      id: inv.id,
+      title: inv.title,
+      description: inv.description,
+      imageUrl: inv.imageUrl,
+      creatorName: inv.creator.name,
+      itemsCount: inv._count.items,
+    }));
+
+    return inventoriesData;
+  }
+
 }
 
 const inventoryService = new InventoryService();

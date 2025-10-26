@@ -16,25 +16,25 @@ inventoryRouter.post(
   authMiddleware,
   inventoryAccessMiddleware({ allowEditors: false }),
   inventoryController.update
-); 
+);
 
 inventoryRouter.get(
   "/:id",
   authMiddleware,
   inventoryAccessMiddleware({ allowEditors: false }),
   inventoryController.getInventoryData
-); 
+);
 
 inventoryRouter.get(
   "/:id/editors",
   authMiddleware,
   inventoryAccessMiddleware({ allowEditors: false }),
   inventoryController.getInventoryEditors
-); 
+);
 
-inventoryRouter.get("/:id/comments", authMiddleware, commentController.getComments); 
+inventoryRouter.get("/:id/comments", authMiddleware, commentController.getComments);
 
-inventoryRouter.post("/:id/comments/create", authMiddleware, commentController.createComment); 
+inventoryRouter.post("/:id/comments/create", authMiddleware, commentController.createComment);
 
 inventoryRouter.post(
   "/:id/items/create",
@@ -50,11 +50,7 @@ inventoryRouter.post(
   itemController.update
 );
 
-inventoryRouter.patch(
-  "/:id/items/:itemId/like",
-  authMiddleware,
-  itemController.like
-);
+inventoryRouter.patch("/:id/items/:itemId/like", authMiddleware, itemController.like);
 
 inventoryRouter.post(
   "/:id/items/:itemId/delete",
@@ -72,6 +68,18 @@ inventoryRouter.get(
 
 inventoryRouter.get("/categories", categoryController.getCategories);
 
+inventoryRouter.get("/inventories", inventoryController.searchInventories);
+
+inventoryRouter.get("/inventories/popular", inventoryController.getMostPopularInventories);
+
 inventoryRouter.get("/tags", tagController.getTags);
+
+inventoryRouter.get("/tags/:id", tagController.getOne);
+
+inventoryRouter.get("/tags/:id/inventories", tagController.getInventoriesByTag);
+
+
+
+
 
 export default inventoryRouter;

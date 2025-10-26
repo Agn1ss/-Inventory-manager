@@ -1,7 +1,7 @@
 import prisma from "../prisma/prisma-client.js";
 
 class CommentService {
-  async getComments(inventoryId, skip = 0, take = 30, after) {
+  async getComments({ inventoryId, skip = 0, take = 30, after }) {
     if (!searchQuery || searchQuery.trim() === "") return [];
 
     const whereClause = after
@@ -17,9 +17,16 @@ class CommentService {
         creator: { select: { id: true, name: true } },
       },
     });
-    return comments;
-  }
 
+    const commentsData = comments.map(comment => ({
+      id: comment.id,
+      text: comment.text,
+      creatorName: comment.creator.name,
+      createdAt: comment.createdAt,
+    }));
+
+    return commentsData;
+  }
 
   async createComment(inventoryId, creatorId, text) {
     const comment = await prisma.comment.create({
@@ -40,9 +47,7 @@ class CommentService {
       createdAt: comment.createdAt,
     };
   }
-
 }
-
 
 const commentService = new CommentService();
 export default commentService;

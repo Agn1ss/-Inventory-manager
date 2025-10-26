@@ -49,10 +49,54 @@ class InventoryController {
   async getInventoryEditors(req, res, next) {
     try {
       const id = req.params.id;
-      const { search, skip, take } = req.query;
-      const editors = await inventoryService.getInventoryEditors(id, search, skip, take);
-
+      const {
+        search = "",
+        skip = 0,
+        take = 20,
+      } = req.query;
+  
+      const editors = await inventoryService.getInventoryEditors({
+        inventoryId: id,
+        search,
+        skip: Number(skip),
+        take: Number(take),
+      });
+  
       return res.json(editors);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+
+  async searchInventories(req, res, next) {
+    try {
+      const {
+        search = "",
+        skip = 0,
+        limit = 5,
+        newest = false,
+      } = req.query;
+  
+      const inventoriesData = await inventoryService.searchInventories({
+        search,
+        skip: Number(skip),
+        take: Number(limit),
+        newest: newest === "true" || newest === true,
+      });
+  
+      return res.json(inventoriesData);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async getMostPopularInventories(req, res, next) {
+    try {
+      const limit = parseInt(req.query.limit) || 5;
+      const inventoriesData = await inventoryService.getMostPopularInventories(limit);
+
+      return res.json(inventoriesData);
     } catch (e) {
       next(e);
     }

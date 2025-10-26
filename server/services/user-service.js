@@ -87,7 +87,7 @@ class UserService {
     return { ...tokens, user: userDto };
   }
 
-  async getUsers(search = "", skip = 0, take = 20) {
+  async getUsers({ search = "", skip = 0, take = 20 }) {
     const searchFilter = search
       ? {
           OR: [
@@ -139,7 +139,7 @@ class UserService {
     }
   }
 
-  async getUserInventories(userId, search = "", skip = 0, take = 20) {
+  async getUserInventories({ userId, search = "", skip = 0, take = 20 }) {
     const searchFilter = search
       ? {
           OR: [
@@ -168,7 +168,7 @@ class UserService {
     return inventories;
   }
 
-  async getUserEditableInventories(userId, search = "", skip = 0, take = 20) {
+  async getUserEditableInventories({ userId, search = "", skip = 0, take = 20 }) {
     const searchFilter = search
       ? {
           OR: [

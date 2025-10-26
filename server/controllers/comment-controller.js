@@ -3,17 +3,16 @@ import commentService from "../services/comment-sevice.js";
 class CommentController {
   async getComments(req, res, next) {
     try {
-      const id = req.params.id;
-      const { skip, take, after } = req.query;
+      const { id } = req.params;
+      const { skip = 0, take = 20, after } = req.query;
 
-      const comments = await commentService.getComments(id, skip, take, after);
+      const commentsData = await commentService.getComments({
+        itemId: id,
+        skip: Number(skip),
+        take: Number(take),
+        after,
+      });
 
-      const commentsData = comments.map((comment) => ({
-        id: comment.id,
-        text: comment.text,
-        creatorName: comment.creator.name,
-        createdAt: comment.createdAt,
-      }));
 
       return res.json(commentsData);
     } catch (e) {
@@ -26,14 +25,13 @@ class CommentController {
       const creatorId = req.user.id;
       const { text } = req.body;
       const id = req.params.id;
-      const comments = await commentService.createComment(id,creatorId, text);
+      const comments = await commentService.createComment(id, creatorId, text);
 
       return res.json(comments);
     } catch (e) {
       next(e);
     }
   }
-
 }
 
 const commentController = new CommentController();

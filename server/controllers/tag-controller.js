@@ -4,16 +4,47 @@ import tagService from "../services/tag-service.js";
 class TagController {
   async getTags(req, res, next) {
     try {
-      const searchQuery = req.query.search || "";
-      const limit = parseInt(req.query.limit) || 8;
-
-      const tags = await tagService.getTags(searchQuery, limit);
-
+      const { search = "", limit = 8 } = req.query;
+      const tags = await tagService.getTags({
+        search,
+        limit: Number(limit),
+      });
+  
       return res.json(tags);
     } catch (e) {
       next(e);
     }
   }
+
+  async getOne(req, res, next) {
+    try {
+      const id = req.params.id;
+      const tag = await tagService.getOne(id);
+  
+      return res.json(tag);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async getInventoriesByTag(req, res, next) {
+    try {
+      const { tagId } = req.params;
+      const { skip = 0, take = 20 } = req.query;
+  
+      const inventories = await tagService.getInventoriesByTag({
+        tagId,
+        skip: Number(skip),
+        take: Number(take),
+      });
+  
+      return res.json(inventories);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+
 }
 
 

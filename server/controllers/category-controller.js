@@ -3,11 +3,13 @@ import categoryService from "../services/category-service.js";
 class CategoryController {
   async getCategories(req, res, next) {
     try {
-      const searchQuery = req.query.search || "";
-      const limit = parseInt(req.query.limit) || 8;
-
-      const categoriesData = await categoryService.getCategories(searchQuery, limit);
-
+      const { search = "", limit = 8 } = req.query;
+  
+      const categoriesData = await categoryService.getCategories({
+        search,
+        limit: Number(limit),
+      });
+  
       return res.json(categoriesData);
     } catch (e) {
       next(e);
