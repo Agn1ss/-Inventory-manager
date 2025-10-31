@@ -70,20 +70,20 @@ class UserController {
 
   async getUsers(req, res, next) {
     try {
-      const { search = "", skip = 0, take = 20 } = req.query;
-  
+      const { search = "", skip = 0, take = 20, sortBy = "name" } = req.query;
+
       const users = await userService.getUsers({
         search,
         skip: Number(skip),
         take: Number(take),
+        sortBy,
       });
-  
+
       return res.json(users);
     } catch (e) {
       next(e);
     }
   }
-
 
   async delete(req, res, next) {
     try {
@@ -115,18 +115,31 @@ class UserController {
     }
   }
 
+  async changeRole(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+
+      await userService.changeRole(id, role);
+
+      return res.json({ message: `Role of user ${id} changed to ${role}` });
+    } catch (e) {
+      next(e);
+    }
+  }
+
   async getUserInventories(req, res, next) {
     try {
       const userId = req.user.id;
       const { search = "", skip = 0, take = 20 } = req.query;
-  
+
       const inventories = await userService.getUserInventories({
         userId,
         search,
         skip: Number(skip),
         take: Number(take),
       });
-  
+
       return res.json(inventories);
     } catch (e) {
       next(e);
@@ -137,14 +150,14 @@ class UserController {
     try {
       const userId = req.user.id;
       const { search = "", skip = 0, take = 20 } = req.query;
-  
+
       const inventories = await userService.getUserEditableInventories({
         userId,
         search,
         skip: Number(skip),
         take: Number(take),
       });
-  
+
       return res.json(inventories);
     } catch (e) {
       next(e);

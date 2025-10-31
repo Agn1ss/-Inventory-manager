@@ -185,7 +185,7 @@ class InventoryService {
     }
   }
 
-  async getInventoryEditors({ inventoryId, search = "", skip = 0, take = 20 }) {
+  async getInventoryEditors({ inventoryId, search = "", skip = 0, take = 20, sortBy = "name" }) {
     const searchFilter = search
       ? {
           user: {
@@ -196,30 +196,28 @@ class InventoryService {
           },
         }
       : {};
-
+  
     const queryOptions = {
       where: {
         inventoryId,
         ...searchFilter,
       },
       skip: Number(skip),
-      select: {
+      orderBy: {
         user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+          [sortBy === "email" ? "email" : "name"]: "asc",
         },
       },
+      select: {
+        user: true,
+      },
     };
-
+  
     if (Number(take) > 0) {
       queryOptions.take = Number(take);
     }
-
+  
     const editors = await prisma.inventoryEditor.findMany(queryOptions);
-
     return editors.map(e => e.user);
   }
 
@@ -295,7 +293,6 @@ class InventoryService {
 
     return inventoriesData;
   }
-
 }
 
 const inventoryService = new InventoryService();

@@ -87,24 +87,30 @@ class UserService {
     return { ...tokens, user: userDto };
   }
 
-  async getUsers({ search = "", skip = 0, take = 20 }) {
-    const searchFilter = search
-      ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-          ],
-        }
-      : {};
-
+  async getUsers({ search = "", skip = 0, take = 20, sortBy = "name" }) {
+    const queryOptions = {
+      where: search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {},
+      orderBy: {
+        [sortBy === "email" ? "email" : "name"]: "asc",
+      },
+    };
+  
     const users = await prisma.user.findMany({
-      where: searchFilter,
+      ...queryOptions,
       skip: Number(skip),
       take: Number(take),
-      select: { id: true, name: true, email: true, isBlocked: true, role: true },
     });
 
-    return users;
+    const usersDto = users.map(user => new UserDto(user));
+  
+    return usersDto;
   }
 
   async delete(id) {
@@ -134,6 +140,24 @@ class UserService {
         where: { id },
         data: { isBlocked: false },
       });
+    } catch (e) {
+      throw ApiError.BadRequest("User not found");
+    }
+  }
+
+  async changeRole(id, role = "USER") {
+    const roles = ["USER", "ADMIN"];
+
+    if (!roles.includes(role)) {
+      throw ApiError.NotFound(`Role ${role} not found`);
+    }
+
+    try {
+      const user = await prisma.user.update({
+        where: { id },
+        data: { role },
+      });
+      return user;
     } catch (e) {
       throw ApiError.BadRequest("User not found");
     }

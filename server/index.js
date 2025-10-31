@@ -15,16 +15,16 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+}));
 app.use(cookieParser());
 
 
-app.use("/api/user", userRouter);
+app.use("/api", userRouter);
 app.use("/api/oauth", oauthRouter);
 app.use("/api/inventory", inventoryRouter)
-app.use(authMiddleware);
-app.use(roleMiddleware);
-app.use(inventoryAccessMiddleware)
 app.use(errorMiddleware);
 
 const start = async () => {

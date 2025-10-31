@@ -53,6 +53,7 @@ class InventoryController {
         search = "",
         skip = 0,
         take = 20,
+        sortBy = "name",
       } = req.query;
   
       const editors = await inventoryService.getInventoryEditors({
@@ -60,6 +61,7 @@ class InventoryController {
         search,
         skip: Number(skip),
         take: Number(take),
+        sortBy,
       });
   
       return res.json(editors);
